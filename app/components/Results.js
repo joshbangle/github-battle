@@ -50,34 +50,40 @@ ProfileList.propTypes = {
     profile: PropTypes.object.isRequired
 }
 
-export default class Results extends React.Component {
-    state = {
-        winner: null,
-        loser: null,
-        error: null,
-        loading: true
+const resultsReducer = (state, action) => {
+    switch(action.type) {
+        case 'success': 
+            return {
+                ...state,
+                winner: action.players[0],
+                loser: action.players[1],
+                loading: false
+            }
+        case 'error':
+            return {
+                ...state,
+                error: action.error.message,
+                loading: false
+            }
+        default: throw new Error('Unsupported Action')            
     }
+}
 
-    componentDidMount() {
-        const { playerOne, playerTwo } = queryString.parse(this.props.location.search)
+export default function Results ({location}) {
+    
+    const { playerOne, playerTwo } = queryString.parse(location.search)
+    const [state, dispatch] = React.useReducer(
+        resultsReducer,
+        {error: null,
+        loading: true}
+    )
+    React.useEffect(() => {
+        battle([playerOne, playerTwo])
+            .then((players) => dispatch({type: 'success', players}))
+            .catch((error)=> dispatch({type: error, error}))
+    }, [playerOne, playerTwo])
 
-        battle([ playerOne, playerTwo ])
-            .then((players) => {
-                this.setState({
-                    winner: players[0],
-                    loser: players[1],
-                    error: null,
-                    loading: false
-                })
-            }).catch(({ message }) => {
-                this.setState({
-                    error: message,
-                    loading: false
-                })
-            })
-    }
-    render() {
-        const {winner, loser, error, loading} = this.state
+        const {winner, loser, error, loading} = state
 
         if(loading === true) {
             return <Loading text='Battling' />
@@ -91,7 +97,7 @@ export default class Results extends React.Component {
 
         return (
             <ThemeConsumer>
-            {({ theme }) => (
+            {( theme ) => (
                 <React.Fragment>
                     <div className='grid space-around container-sm'>
 
@@ -126,5 +132,10 @@ export default class Results extends React.Component {
             
             
         )
-    }
+    
 }
+
+
+
+
+
